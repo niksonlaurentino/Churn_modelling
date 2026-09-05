@@ -16,7 +16,7 @@ sns.set_theme(style="whitegrid")
 plt.rcParams.update({"font.size": 10, "figure.autolayout": True})
 
 # CARREGAMENTO DO DATASET
-DATASET_PATH = r'C:\ML_CREDIT\Churn_Modelling.csv'
+DATASET_PATH = 'Churn_Modelling.csv'
 df = pd.read_csv(DATASET_PATH)
 
 # DROP DE COLUNAS IRRELEVANTES
