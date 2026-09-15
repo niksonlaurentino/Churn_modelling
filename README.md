@@ -1,84 +1,179 @@
-# Previsão de Churn: Cancelamento de Apólices de Seguro
+# Previsão de Churn Bancário (Churn Modelling)
 
-Este repositório contém a pipeline completa para análise exploratória, pré-processamento, treinamento e avaliação de modelos de Machine Learning aplicados à predição de Churn (Cancelamento de Apólices de Seguro).
+Script em Python para análise exploratória e previsão de **churn (cancelamento de clientes)** de um banco, comparando os desempenhos de `RandomForestClassifier` e `LogisticRegression`, com ajuste de limiar de decisão (threshold) para priorizar recall, validação cruzada estratificada e visualizações completas (correlações, matrizes de confusão e distribuição de probabilidades).
 
-O objetivo principal é identificar precocemente clientes com alta probabilidade de cancelamento, permitindo que a equipe de retenção/CRM atue de forma preventiva antes do término do contrato.
+## 📋 Sumário
 
----
+- [Requisitos](#-requisitos)
+- [Instalação](#-instalação)
+- [Estrutura do dataset](#-estrutura-do-dataset)
+- [Como usar](#-como-usar)
+- [Exemplos de uso](#-exemplos-de-uso)
+- [Saídas geradas](#-saídas-geradas)
+- [Observações](#-observações)
+- [Licença](#-licença)
 
-## 1. Visão Geral do Problema de Negócio
+## ✅ Requisitos
 
-No setor de seguros, a aquisição de novos clientes é significativamente mais cara do que a retenção dos ativos. A perda de segurados (Churn) afeta diretamente o volume de prêmios emitidos e a rentabilidade da carteira.
+- Python 3.9+
+- Bibliotecas:
+  - `numpy`
+  - `pandas`
+  - `matplotlib`
+  - `seaborn`
+  - `scikit-learn`
 
-* Objetivo: Construir um modelo preditivo capaz de identificar clientes em risco de cancelamento.
-* Foco da Métrica: Maximizar o Recall (Sensibilidade) para a classe de Churn, garantindo que o menor número possível de cancelamentos passe despercebido.
-* Estratégia Operacional: Ajuste do limiar de decisão (Threshold) de probabilidade para 0.20 no algoritmo campeão.
+## 🚀 Instalação
 
----
+1. Clone o repositório:
 
-## 2. Estrutura dos Dados e Atributos
+   ```bash
+   git clone https://github.com/seu-usuario/churn-bancario-predictor.git
+   cd churn-bancario-predictor
+   ```
 
-O dataset passa por uma etapa inicial de limpeza na qual colunas sem valor preditivo (RowNumber, CustomerId, Surname) são removidas. As variáveis restantes são organizadas da seguinte forma:
+2. (Opcional, mas recomendado) Crie um ambiente virtual:
 
-* CreditScore (Numérica Contínua): Score de crédito do titular | Tratamento: StandardScaler
-* Age (Numérica Contínua): Idade do segurado | Tratamento: StandardScaler
-* Tenure (Numérica Discreta): Tempo de permanência na seguradora em anos | Tratamento: StandardScaler
-* Balance (Numérica Contínua): Saldo em conta / Reserva acumulada | Tratamento: StandardScaler
-* NumOfProducts (Numérica Discreta): Quantidade de seguros/produtos contratados | Tratamento: StandardScaler
-* EstimatedSalary (Numérica Contínua): Renda anual estimada do cliente | Tratamento: StandardScaler
-* Geography (Categórica): Localização geográfica (País/Região) | Tratamento: OneHotEncoder(drop='first')
-* Gender (Categórica): Gênero do segurado | Tratamento: OneHotEncoder(drop='first')
-* HasCrCard (Binária): Possui cartão de crédito ativo (0 ou 1) | Tratamento: Passthrough (Mantida 0/1)
-* IsActiveMember (Binária): Engajamento/Membro ativo (0 ou 1) | Tratamento: Passthrough (Mantida 0/1)
-* Exited (Target): Variável Alvo (1 = Cancelou a Apólice, 0 = Permaneceu) | Tratamento: N/A
+   ```bash
+   python -m venv venv
+   source venv/bin/activate  # Linux/Mac
+   venv\Scripts\activate     # Windows
+   ```
 
----
+3. Instale as dependências:
 
-## 3. Pipeline de Pré-processamento e Modelagem
+   ```bash
+   pip install numpy pandas matplotlib seaborn scikit-learn
+   ```
 
-A arquitetura do código foi estruturada utilizando a biblioteca scikit-learn para garantir reprodutibilidade e evitar o vazamento de dados (data leakage):
+   Ou crie um arquivo `requirements.txt` com o conteúdo abaixo e instale com `pip install -r requirements.txt`:
 
-1. Análise de Correlação: Aplicação das matrizes de Pearson (relações lineares) e Spearman (relações monotônicas) para entendimento preliminar do comportamento das variáveis frente à variável alvo Exited.
-2. Divisão Treino/Teste: Divisão de 80% para treino e 20% para teste, com estratificação (stratify=df_y) para preservar a proporção da classe minoritária (Churn).
-3. Transformação de Atributos (ColumnTransformer):
-   - Padronização de variáveis numéricas contínuas via StandardScaler.
-   - Codificação de variáveis categóricas via OneHotEncoder com remoção da primeira categoria para evitar multicolinearidade.
-   - Manutenção de variáveis binárias (0/1) sem alteração de escala.
-4. Algoritmos Avaliados:
-   - Random Forest Classifier: Modelo baseado em ensamble de árvores de decisão.
-   - Regressão Logística: Modelo linear baseline com ajuste de pesos de classe (class_weight='balanced').
-5. Ajuste de Limiar (Thresholding): Redução do ponto de corte padrão (0.50) para 0.20, priorizando a captura do Churn.
-6. Validação Cruzada: Validação do pipeline completo com StratifiedKFold (k=5) para verificação de estabilidade em múltiplos subconjuntos de dados.
+   ```
+   numpy>=1.23.0
+   pandas>=1.5.0
+   matplotlib>=3.6.0
+   seaborn>=0.12.0
+   scikit-learn>=1.2.0
+   ```
 
----
+## 📊 Estrutura do dataset
 
-## 4. Requisitos de Execução
+O script espera um arquivo `Churn_Modelling.csv` no mesmo diretório, com (entre outras) as seguintes colunas:
 
-Para rodar o script localmente, certifique-se de ter as seguintes bibliotecas instaladas em seu ambiente Python:
+| Coluna              | Tipo             | Uso no script                              |
+|---------------------|------------------|---------------------------------------------|
+| `RowNumber`         | -                | Descartada                                   |
+| `CustomerId`        | -                | Descartada                                   |
+| `Surname`           | -                | Descartada                                   |
+| `CreditScore`       | Numérica         | Padronizada (`StandardScaler`)               |
+| `Geography`         | Categórica       | One-Hot Encoding                             |
+| `Gender`            | Categórica       | One-Hot Encoding                             |
+| `Age`               | Numérica         | Padronizada (`StandardScaler`)                |
+| `Tenure`            | Numérica         | Padronizada (`StandardScaler`)                |
+| `Balance`           | Numérica         | Padronizada (`StandardScaler`)                |
+| `NumOfProducts`     | Numérica         | Padronizada (`StandardScaler`)                |
+| `HasCrCard`         | Binária (0/1)    | Passthrough (mantida como está)               |
+| `IsActiveMember`    | Binária (0/1)    | Passthrough (mantida como está)               |
+| `EstimatedSalary`   | Numérica         | Padronizada (`StandardScaler`)                |
+| `Exited`            | Binária (0/1)    | **Target** (variável alvo, indica o churn)   |
 
-pip install numpy pandas matplotlib seaborn scikit-learn
+> 💡 O dataset "Churn Modelling" é amplamente utilizado em tutoriais de ML e pode ser encontrado publicamente, por exemplo, no [Kaggle](https://www.kaggle.com/datasets/shrutimechlearn/churn-modelling).
 
-### Como Executar
+Coloque o arquivo `Churn_Modelling.csv` na raiz do projeto, no mesmo diretório do script, antes de executá-lo.
 
-1. Clone este repositório:
-   git clone https://github.com/seu-usuario/nome-do-repositorio.git
-2. Atualize o caminho da variável DATASET_PATH no arquivo principal para o local onde seu arquivo Churn_Modelling.csv está armazenado.
-3. Execute o script:
-   python churn_insurance_analysis.py
+## 🖥️ Como usar
 
----
+Execute o script diretamente, sem parâmetros:
 
-## 5. Resultados e Conclusões de Negócio
+```bash
+python churn_predictor.py
+```
 
-Ao adotar o limiar ajustado de 0.20, os modelos apresentaram o seguinte comportamento:
+O script executa, em sequência:
+1. Carregamento do `Churn_Modelling.csv` e remoção de colunas irrelevantes (`RowNumber`, `CustomerId`, `Surname`).
+2. Cálculo e exibição (em heatmaps) das correlações de **Pearson** e **Spearman** entre os atributos e a variável alvo `Exited`.
+3. Separação em features (`df_x`) e target (`df_y`).
+4. Divisão treino/teste (80/20, com `stratify` no target).
+5. Pré-processamento via `ColumnTransformer`: `StandardScaler` para colunas numéricas, `OneHotEncoder(drop='first')` para colunas categóricas e `passthrough` para colunas binárias.
+6. Treinamento de dois modelos: `RandomForestClassifier` (com `class_weight='balanced'`) e `LogisticRegression` (com `class_weight='balanced'`).
+7. Ajuste do **limiar de decisão (threshold)** para `0.20`, priorizando recall na detecção de clientes com maior propensão ao churn.
+8. Impressão de acurácia e relatório de classificação para os dois modelos.
+9. Validação cruzada estratificada (`StratifiedKFold`, 5 folds) comparando a consistência dos dois modelos.
+10. Exibição de um painel com matrizes de confusão e histogramas de distribuição das probabilidades previstas por classe.
 
-* Random Forest (Modelo Recomendado): Demostrou alta capacidade de separação das probabilidades entre as duas classes. Alcançou um Recall superior a 76% na detecção de cancelamentos de apólices, mantendo o volume de falsos alarmes em um nível operacionalmente sustentável para as equipes de retenção.
-* Regressão Logística: Apresentou sobreposição expressiva nas probabilidades calculadas para clientes fiéis e clientes em churn. No limiar de 0.20, o modelo gerou um volume excessivo de Falsos Positivos, inviabilizando sua aplicação prática no ambiente de negócios.
+## 💡 Exemplos de uso
 
----
+### Executando o script como está
 
-## 6. Próximos Passos
+```bash
+python churn_predictor.py
+```
 
-* Otimização de hiperparâmetros no Random Forest utilizando GridSearchCV ou RandomizedSearchCV.
-* Teste de algoritmos avançados de Gradient Boosting (XGBoost, LightGBM e CatBoost).
-* Análise de Feature Importance para identificar os principais gatilhos operacionais que levam ao cancelamento das apólices.
+O script exibirá, na sequência, dois painéis gráficos (`plt.show()`):
+1. Matrizes de correlação de Pearson e Spearman.
+2. Matrizes de confusão e histogramas de separação de probabilidades para os dois modelos.
+
+E imprimirá no console, entre outras informações:
+
+```
+=================================================================
+ CORRELAÇÃO COM A VARIÁVEL ALVO (EXITED / CHURN) 
+=================================================================
+
+--- PEARSON (Linear) ---
+Exited            1.000000
+Age               0.285...
+...
+
+--- DESEMPENHO: RANDOM FOREST ---
+Acuracia Geral: 0.79xx
+              precision    recall  f1-score   support
+  Permaneceu       ...
+       Churn       ...
+```
+
+### Ajustando o limiar de decisão (threshold)
+
+Para priorizar precisão em vez de recall (ou vice-versa), altere a variável `novo_threshold` no script:
+
+```python
+novo_threshold = 0.35  # valor original: 0.20
+```
+
+E execute novamente:
+
+```bash
+python churn_predictor.py
+```
+
+### Reutilizando os modelos treinados em uma sessão interativa
+
+Como o script não encapsula a lógica em funções, a forma mais simples de reaproveitar os modelos (`rf_model`, `lr_model`) e o pré-processador (`preprocessor`) após a execução é rodá-lo com `python -i`, mantendo as variáveis disponíveis no console:
+
+```bash
+python -i churn_predictor.py
+```
+
+```python
+>>> nova_amostra_processada = preprocessor.transform(x_test.head(1))
+>>> rf_model.predict_proba(nova_amostra_processada)
+```
+
+## 📊 Saídas geradas
+
+- **Console**: correlações de Pearson e Spearman com a variável alvo, acurácia e relatório de classificação (`RandomForest` e `LogisticRegression`) com o threshold ajustado, e resultados da validação cruzada (média e desvio padrão da acurácia em 5 folds).
+- **Gráficos (via `plt.show()`)**:
+  - Painel 1: heatmaps de correlação de Pearson e Spearman entre os atributos.
+  - Painel 2: matrizes de confusão dos dois modelos e histogramas comparando a distribuição das probabilidades previstas para as classes "Permaneceu" e "Churn", com o limiar de decisão destacado.
+
+## ⚠️ Observações
+
+- O script está estruturado de forma **sequencial/procedural** (sem funções ou classes) e deve ser executado de uma só vez, do início ao fim.
+- O caminho do dataset está fixado na variável `DATASET_PATH = 'Churn_Modelling.csv'`; para usar outro arquivo, edite essa variável diretamente no script.
+- O limiar de decisão (`novo_threshold = 0.20`) foi definido para priorizar recall (reduzir falsos negativos de churn); ajuste esse valor conforme o objetivo do negócio (maior precisão vs. maior recall).
+- Os hiperparâmetros dos modelos (`n_estimators=100`, `max_depth=20` para o Random Forest; `max_iter=1000` para a Regressão Logística) estão fixos no código; ajuste-os conforme necessário para o seu dataset.
+- A validação cruzada (`cross_val_score`) é executada sobre os dados **não escalonados/originais** (`df_x`, `df_y`), pois o próprio pipeline (`pip_rf`/`pip_lr`) já inclui o pré-processamento em cada fold.
+
+## 📄 Licença
+
+Este projeto está licenciado sob os termos da licença MIT. Sinta-se livre para usar, modificar e distribuir.
